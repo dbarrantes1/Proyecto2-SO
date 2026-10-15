@@ -22,6 +22,275 @@ class TemporaryAlgorithm:
 
         raise MemoryError("No hay páginas disponibles para reemplazar")
 
+class FIFO:
+    """Expulsa la página que lleva más tiempo en RAM."""
+
+    def __init__(self):
+        self.order = []
+
+    def on_load(self, page):
+        if page not in self.order:
+            self.order.append(page)
+
+    def on_use(self, page):
+        pass
+
+    def on_evict(self, page):
+        if page in self.order:
+            self.order.remove(page)
+
+    def on_delete(self, page):
+        self.on_evict(page)
+
+    def choose_victim(self, ram, protected_pages):
+        for page in self.order:
+            if page in ram and page not in protected_pages:
+                return page
+
+        raise MemoryError("FIFO: no hay víctimas disponibles")
+
+
+class SecondChance:
+    """Segunda oportunidad."""
+
+    def __init__(self):
+        self.order = []
+        self.referenced = {}
+
+    def on_load(self, page):
+        if page not in self.order:
+            self.order.append(page)
+        self.referenced[page] = False
+
+    def on_use(self, page):
+        if page in self.referenced:
+            self.referenced[page] = True
+
+    def on_evict(self, page):
+        if page in self.order:
+            self.order.remove(page)
+        self.referenced.pop(page, None)
+
+    def on_delete(self, page):
+        self.on_evict(page)
+
+    def choose_victim(self, ram, protected_pages):
+        # Se limita el recorrido para detectar si no hay
+        # ninguna página elegible.
+        for _ in range(2 * len(self.order) + 1):
+            if not self.order:
+                break
+
+            page = self.order[0]
+
+            if page not in ram:
+                self.order.pop(0)
+                continue
+
+            if page in protected_pages:
+                self.order.append(self.order.pop(0))
+                continue
+
+            if self.referenced.get(page, False):
+                self.referenced[page] = False
+                self.order.append(self.order.pop(0))
+            else:
+                return page
+
+        raise MemoryError("SC: no hay víctimas disponibles")
+
+
+class LRU:
+    """Expulsa la página utilizada menos recientemente."""
+
+    def __init__(self):
+        self.clock = 0
+        # Diccionario que almacena el último acceso de cada página.
+        self.last_used = {}
+
+    def on_load(self, page):
+        self.clock += 1
+        self.last_used[page] = self.clock
+
+    def on_use(self, page):
+        self.clock += 1
+        self.last_used[page] = self.clock
+
+    def on_evict(self, page):
+        if page in self.last_used:
+            del self.last_used[page]
+
+    def on_delete(self, page):
+        self.on_evict(page)
+
+    def choose_victim(self, ram, protected_pages):
+        candidates = []
+
+        for page in ram:
+
+            if page is None:
+                continue
+
+            if page in protected_pages:
+                continue
+
+            candidates.append(page)
+
+        if len(candidates) == 0:
+            raise MemoryError(
+                "LRU: no hay víctimas disponibles"
+            )
+
+        victim = candidates[0]
+
+        oldest_access = self.last_used.get(victim, 0)
+
+        for page in candidates[1:]:
+
+            last_access = self.last_used.get(page, 0)
+
+            if last_access < oldest_access:
+                victim = page
+                oldest_access = last_access
+
+        return victim
+
+
+class LFU:
+    """Expulsa la página con menos accesos."""
+
+    def __init__(self):
+        self.frequency = {}
+        self.loaded_at = {}
+        self.clock = 0
+
+    def on_load(self, page):
+        self.clock += 1
+        self.frequency[page] = 1
+        self.loaded_at[page] = self.clock
+
+    def on_use(self, page):
+        if page in self.frequency:
+            self.frequency[page] += 1
+
+    def on_evict(self, page):
+        self.frequency.pop(page, None)
+        self.loaded_at.pop(page, None)
+
+    def on_delete(self, page):
+        self.on_evict(page)
+
+    
+    def choose_victim(self, ram, protected_pages):
+        candidates = []
+
+        for page in ram:
+
+            if page is None:
+                continue
+
+            if page in protected_pages:
+                continue
+
+            candidates.append(page)
+
+        if len(candidates) == 0:
+            raise MemoryError("LFU: no hay víctimas disponibles")
+
+        victim = candidates[0]
+
+        lowest_frequency = self.frequency.get(victim, 0)
+        oldest_load = self.loaded_at.get(victim, 0)
+
+        for page in candidates[1:]:
+
+            current_frequency = self.frequency.get(page, 0)
+            current_load = self.loaded_at.get(page, 0)
+
+            if current_frequency < lowest_frequency:
+
+                victim = page
+                lowest_frequency = current_frequency
+                oldest_load = current_load
+
+            elif current_frequency == lowest_frequency:
+
+                if current_load < oldest_load:
+                    victim = page
+                    oldest_load = current_load
+
+        return victim
+
+
+class OPT:
+    """Algoritmo óptimo de reemplazo de páginas."""
+
+    def __init__(self, references):
+        self.references = references.copy()
+        self.position = 0
+
+    def on_load(self, page):
+        pass
+
+    def on_use(self, page):
+        self.position += 1
+
+    def on_evict(self, page):
+        pass
+
+    def on_delete(self, page):
+        pass
+
+    def choose_victim(self, ram, protected_pages):
+        candidates = []
+
+        for page in ram:
+
+            if page is None:
+                continue
+
+            if page in protected_pages:
+                continue
+
+            candidates.append(page)
+
+        if len(candidates) == 0:
+            raise MemoryError("OPT: no hay víctimas disponibles")
+
+        victim = candidates[0]
+
+        next_use_victim = None
+
+        for i in range(self.position + 1, len(self.references)):
+
+            if self.references[i] == victim:
+                next_use_victim = i
+                break
+
+        if next_use_victim is None:
+            return victim
+
+        for page in candidates[1:]:
+
+            next_use_page = None
+
+            for i in range(self.position + 1, len(self.references)):
+
+                if self.references[i] == page:
+                    next_use_page = i
+                    break
+
+
+            if next_use_page is None:
+                return page
+
+
+            if next_use_page > next_use_victim:
+                victim = page
+                next_use_victim = next_use_page
+
+        return victim
+
 
 class MMU:
     def __init__(self, algorithm):
