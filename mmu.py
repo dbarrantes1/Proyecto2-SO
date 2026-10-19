@@ -361,6 +361,8 @@ class MMU:
 
         for page in self.ptrs[ptr]["pages"]:
             self.load_page(page, protected_pages)
+            # Una página nueva siempre representa un acceso que falla.
+            self.algorithm.on_use(page)
 
         self.last_access = {
             "hits": [],

@@ -1,0 +1,3 @@
+# Debe fallar al cargar: el puntero 99 nunca fue creado.
+new(1,100)
+use(99)

@@ -1,0 +1,6 @@
+# Escenario basico: una asignacion de dos paginas y accesos repetidos.
+new(1,5000)
+use(1)
+use(1)
+delete(1)
+kill(1)

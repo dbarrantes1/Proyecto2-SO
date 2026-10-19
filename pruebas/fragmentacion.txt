@@ -1,0 +1,9 @@
+# Asignaciones que dejan fragmentacion interna:
+# 5000 bytes ocupan 2 paginas, 3192 bytes quedan desperdiciados.
+new(1,5000)
+new(2,1000)
+new(3,7000)
+use(1)
+use(2)
+use(3)
+# Se dejan las asignaciones vivas para observar la fragmentacion en pantalla.

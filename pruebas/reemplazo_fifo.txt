@@ -1,0 +1,14 @@
+# Crea cinco paginas y permite observar sus accesos y eliminacion.
+# Este archivo es pequeno, pero sirve para observar fallos y accesos.
+new(1,4096)
+new(1,4096)
+new(1,4096)
+new(1,4096)
+new(1,4096)
+use(1)
+use(2)
+use(3)
+use(4)
+use(5)
+delete(3)
+kill(1)

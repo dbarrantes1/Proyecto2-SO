@@ -1,0 +1,15 @@
+# Dos procesos intercalados. Los punteros se asignan globalmente:
+# 1 pertenece al proceso 1; 2, 3 y 4 al proceso 2.
+new(1,6000)
+new(2,9000)
+use(1)
+new(2,3000)
+use(3)
+new(1,100)
+use(2)
+use(4)
+delete(3)
+kill(2)
+use(1)
+delete(1)
+kill(1)
